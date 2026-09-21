@@ -21,7 +21,9 @@
     font:500 15px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   }
   .app{display:flex;flex-direction:column;height:100vh;height:100dvh;
-    padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+    padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);
+    /* en paysage l'encoche est sur le côté : sans ça des touches passent dessous */
+    padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
 
   header{display:flex;align-items:center;gap:12px;padding:10px 14px;
     background:linear-gradient(90deg,#7c5cff,#22d3ee);flex:0 0 auto}
@@ -83,6 +85,7 @@
   .hud .v{text-align:center;flex:0 0 auto}
   .hud .v b{display:block;font-size:17px}
   .hud .v span{font-size:10px;color:var(--dim)}
+  #stopBtn{padding:9px 12px}
   .bar{height:4px;background:var(--panel2);border-radius:4px;margin-top:8px;overflow:hidden}
   .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
 
@@ -90,10 +93,15 @@
   .stage{flex:0 0 auto;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
     background:#070b16;border-top:1px solid var(--line);touch-action:pan-x}
   .app.mode-learn .stage{flex:1 1 auto;min-height:0}
+  /* pendant le choix du morceau la scène ne sert à rien et, en paysage, ne
+     laissait qu'une bande noire : toute la hauteur va à la liste */
+  .app.mode-learn:not(.playing) .stage{display:none}
   .stage-inner{display:flex;flex-direction:column;min-height:100%}
   .fall{position:relative;overflow:hidden;flex:1 1 auto;height:0;
     background:radial-gradient(120% 80% at 50% 100%,rgba(124,92,255,.14),transparent 70%)}
-  .app.mode-learn .fall{min-height:150px}
+  /* plancher volontairement bas : .fall grandit de toute façon (flex:1), mais un
+     minimum élevé poussait le clavier hors du cadre sur les écrans peu hauts */
+  .app.mode-learn .fall{min-height:90px}
   .rail{flex:0 0 auto;height:22px;position:relative;border-bottom:1px solid var(--line)}
   .app.mode-learn .rail{display:none}
   .rail i{position:absolute;top:4px;font:700 10px/1 inherit;color:var(--dim)}
@@ -136,6 +144,49 @@
     border-radius:10px;font-size:13px;max-width:86vw;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.4);
     opacity:0;transition:opacity .2s,transform .2s;z-index:50;pointer-events:none}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ---------------- paysage sur téléphone ----------------
+     La hauteur devient la ressource rare (~390px) : on comprime tout le
+     bavardage et on rend la place au clavier, qui est la raison de tourner
+     l'appareil. Les tablettes (hauteur >560px) gardent la mise en page normale. */
+  @media (orientation:landscape) and (max-height:560px){
+    header{padding:4px 12px;gap:8px}
+    .brand{font-size:14px}
+    .mic-btn{width:28px;height:28px;font-size:13px}
+    .tab{padding:5px 12px;font-size:12px}
+
+    .top{padding:8px 10px;gap:8px}
+    .app.playing .top{padding:5px 10px}
+    .card{padding:10px;border-radius:12px}
+    .card h2{margin-bottom:8px}
+
+    /* barre de jeu sur une seule ligne : chaque pixel repris ici va à la
+       zone de chute, qui est ce qu'on doit pouvoir lire venir */
+    #playbar{padding:6px 11px}
+    .hud{gap:12px}
+    .hud .v{display:flex;align-items:baseline;gap:4px}
+    .hud .v b{display:inline;font-size:15px}
+    .hud .v span{font-size:10px}
+    #stopBtn{padding:6px 10px}
+    .bar{margin-top:5px;height:3px}
+
+    /* le clavier : c'est lui qu'on est venu chercher */
+    .app.mode-learn .keys{height:clamp(104px,34vh,152px)}
+    .app.mode-free  .keys{height:clamp(150px,52vh,240px)}
+
+    /* deux colonnes de morceaux : moitié moins de défilement sur 390px de haut */
+    .songs{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start}
+    .songs-sep{grid-column:1/-1;margin:2px 0 0 4px}
+    .song{padding:9px 11px}
+    .song-t{font-size:13px}
+  }
+
+  /* invitation à tourner l'appareil, visible seulement en portrait sur mobile */
+  .rot-hint{display:none}
+  @media (orientation:portrait) and (max-width:620px){
+    .rot-hint{display:block;font-size:12px;color:var(--dim);
+      margin:0 0 10px 2px;line-height:1.35}
+  }
 </style>
 </head>
 <body>
@@ -183,6 +234,7 @@
       </div>
 
       <div id="setup">
+        <div class="rot-hint">📱 Tourne ton téléphone à l’horizontale : les touches deviennent plus larges et tu en vois bien plus.</div>
         <!-- choisir le morceau d'abord : c'est l'action principale -->
         <div class="row lvls" id="lvlRow" style="margin-bottom:10px"></div>
 
@@ -220,7 +272,7 @@
           <div class="t" id="hudTitle"></div>
           <div class="v"><b id="hudScore">0</b><span>notes</span></div>
           <div class="v"><b id="hudCombo">0</b><span>série</span></div>
-          <div class="v"><button class="btn ghost" id="stopBtn" style="padding:9px 12px">⏹</button></div>
+          <div class="v"><button class="btn ghost" id="stopBtn">⏹</button></div>
         </div>
         <div class="bar"><i id="hudBar"></i></div>
       </div>
@@ -336,7 +388,15 @@ const whites  = [];
 const blackAt = [];   // blackAt[n] = touche noire posée sur la frontière avant la blanche n
 
 function layout(){
-  whiteW = Math.max(34, Math.min(54, Math.floor(window.innerWidth / 8.5)));
+  // largeur réellement disponible pour le clavier (tient compte de l'encoche)
+  const avail = stage.clientWidth || window.innerWidth;
+  // En portrait on vise ~8,5 touches blanches à l'écran, sinon on ne verrait
+  // même pas une octave. Dès qu'on a de la largeur (paysage, tablette), on vise
+  // ~12 touches : elles deviennent nettement plus larges tout en montrant plus
+  // de clavier — c'est tout l'intérêt de tourner l'appareil.
+  whiteW = avail >= 640
+    ? Math.max(48, Math.min(72, Math.floor(avail / 12)))
+    : Math.max(34, Math.min(54, Math.floor(avail / 8.5)));
   blackW = Math.round(whiteW * .62);
 
   whites.length = 0; blackAt.length = 0;
@@ -1247,12 +1307,33 @@ addEventListener('resize', () => {
     if(window.innerWidth === lastW) return;
     lastW = window.innerWidth;
     layout();
+    stageW = stage.clientWidth;
     for(const c of chart){
       c.el.style.left  = (c.k.x + 1) + 'px';
       c.el.style.width = (c.k.w - 2) + 'px';
       c.h = 0; c.dh = 0;            // la hauteur dépend de fallH : à recalculer
     }
+    // après une rotation, la largeur des touches a changé : la position de
+    // défilement ne veut plus rien dire, on recadre sur ce qui est en cours
+    if(running){
+      let minX = Infinity, maxX = -Infinity;
+      for(const c of chart){
+        if(c.k.x < minX) minX = c.k.x;
+        if(c.k.x + c.k.w > maxX) maxX = c.k.x + c.k.w;
+      }
+      follow = (maxX - minX) > stageW;
+      const k = fp < chart.length ? chart[fp].k : null;
+      const c = k ? k.x + k.w / 2 : (minX + maxX) / 2;
+      stage.scrollLeft = Math.max(0, Math.min(totalW - stageW, c - stageW / 2));
+    } else {
+      scrollTo('C' + octView, true);
+    }
   }, 120);
+});
+
+// iOS ne déclenche pas toujours resize au bon moment lors d'une rotation
+addEventListener('orientationchange', () => {
+  setTimeout(() => dispatchEvent(new Event('resize')), 60);
 });
 
 stage.addEventListener('scroll', () => { hitBox = null; }, {passive:true});
